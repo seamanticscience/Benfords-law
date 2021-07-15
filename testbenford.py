@@ -148,9 +148,10 @@ def runtests_basin_ctd():
     osd.testbenford()
 
 
-runtests_basin_osd()
-runtests_depth_osd()
+#runtests_basin_osd()
+#runtests_depth_osd()
 #runtests_depth_osd()
 #runtests_depth_ctd()
 #runtests_basin_ctd()
 #makecsvs()
+testwithknownbenford()
