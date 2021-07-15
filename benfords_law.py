@@ -4,7 +4,7 @@ from copy import deepcopy
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from scipy.stats import chisquare
+from stats_modified import chisquare
 
 temp_actuals = {
     '1': 0,
@@ -29,7 +29,7 @@ class BenfordsLaw:
     against the expected distribution according to Benford's Law.
     """
 
-    def __init__(self, data: Union[list, np.array, pd.Series],col,control,control_val):
+    def __init__(self, data: Union[list, np.array, pd.Series],col=None,control=None,control_val=None):
         """
         Initialize Benford's Law Analysis object
         :param data: Dataset of numbers to test Newcomb-Benford's Law against.
@@ -59,7 +59,6 @@ class BenfordsLaw:
         except ValueError:
             print('All values must be numerical')
             raise
-        self.expected_counts = {k: int(v * len(data)) for k, v in self.expected_distribution.items()}
 
     def _get_fsd(self, number: float):
         # this handles for integers and decimals like in one run
@@ -102,7 +101,7 @@ class BenfordsLaw:
         if get_fsd_counts:
             self.get_counts()
 
-    def apply_visual_test(self,
+    def apply_visual_test(self,stat,
                           figsize: Tuple[int, int] = (15, 7)):
         """
         Plot first significant digit distribution against the expectation of Benford's Law
@@ -124,7 +123,9 @@ class BenfordsLaw:
         plt.ylabel('Distribution', fontweight='bold')
         plt.xticks([r + barWidth for r in range(len(self.expected_distribution.values()))],
                    self.expected_distribution.keys())
-
+        plt.ylim(0,1)
+        plt.text(7.5,0.8,'# data points:' + str(len(self.fsd)))
+        plt.text(7.2,0.7,'(chi2,p): (' + str(round(stat[0], 2)) + ',' + str(round(stat[1],4)) + ')')
         # Create legend & Show graphic
         plt.legend()
         plt.title("First Significant Digit distribution vs Expected Benford's Law Distribution for " + self.col + " with " + self.control + "=" + str(self.control_val))
@@ -140,13 +141,17 @@ class BenfordsLaw:
         :param alpha: Optional. Specifies the required significance level based on which the null hypothesis is rejected or failed to reject. Default = 0.05
         :return: Chi-Squared statistic, p-value
         """
-        statistic, p_value = chisquare(f_obs=list(self.fsd_counts.values()), f_exp=list(self.expected_counts.values()))
+        expected_counts = {k: int(v * len(self.fsd)) for k, v in self.expected_distribution.items()}
+        print(list(expected_counts.values()),sum(list(expected_counts.values())))
+        print(list(self.fsd_counts.values()),sum(list(self.fsd_counts.values())))
+        #print(sum(list(self.fsd_counts.values())), sum(list(expected_counts.values())))
+        statistic, p_value = chisquare(f_obs=list(self.fsd_counts.values()), f_exp=list(expected_counts.values()))
         if p_value > alpha:
             test_status = 'passed'
         else:
             test_status = 'failed'
         print(f'Chi-squared test {test_status} with statistic: {statistic} and p-value: {p_value}')
-        return statistic, p_value
+        return (statistic, p_value)
 
     def apply_benfords_law(self):
         """
@@ -155,5 +160,5 @@ class BenfordsLaw:
         self._extract_fsd()
         self.get_counts()
         self.get_distribution()
-        self.apply_visual_test()
-        self.apply_chi_sq_test()
+        stat = self.apply_chi_sq_test()
+        self.apply_visual_test(stat)

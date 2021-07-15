@@ -29,6 +29,10 @@ def testbenford1b(data,col,z = None): #compile for one depth, use benfords-law p
     benfords = BenfordsLaw(X,col)
     benfords.apply_benfords_law()
 
+def testwithknownbenford():
+    census = pd.read_csv('data/testdata-uscensus.csv')
+    benford = BenfordsLaw(census['CENSUS2010POP'].values,'CENSUS2010POP','','')
+    benford.apply_benfords_law()
 
 #testbenford1b(pd.read_csv('testset.csv'),'t')
 
@@ -49,6 +53,30 @@ def preprocess(fid,output_name):
     data = pd.concat(frames)
     data = data.fillna(-1)
     #print(data.head())
+    atlantic = [2.0,6.0]
+    pacific = [3.0,4.0]
+    basins = regionmask.defined_regions.natural_earth.ocean_basins_50
+    lon = np.arange(0.5, 360)
+    lat = np.arange(89.5, -90, -1)
+    mask = basins.mask(lon, lat)
+    pd.DataFrame({'names':basins.names,'numbers':basins.numbers}).to_csv('basinkey.csv')
+    #print(mask[50,50].values)
+    #print(mask.sel(lon=26,lat=43).values)
+    data['basin'] = ['' for i in range(len(data))]
+    for i in range(len(data)):
+        #print(round(osd['longitude'].iloc[i] * 2)/2,round(osd['latitude'].iloc[i]*2)/2)
+        key= mask.sel(lon=abs(find_nearest([np.floor(data['longitude'].iloc[i])-0.5,np.floor(data['longitude'].iloc[i])+0.5],data['longitude'].iloc[i])),
+                        lat=find_nearest([np.floor(data['latitude'].iloc[i])-0.5,np.floor(data['latitude'].iloc[i])+0.5],data['latitude'].iloc[i])).values
+        if key in atlantic:
+            data['basin'].iloc[i] ="atlantic"
+        elif key in pacific:
+            data['basin'].iloc[i] ="pacific"
+        else:
+            try:
+                data['basin'].iloc[i] = basins.names[key]
+            except:
+                data['basin'].iloc[i] = key
+        print(data['basin'].iloc[i])
     data.to_csv(output_name)
 
 
@@ -75,7 +103,7 @@ class BenfordWOD(object):
     def testbenford(self):
         testdata = self.data[self.data[self.var]>=0] #filter out blanks
         print(testdata)
-        if self.control is not None and (type(self.control_val) is int or type(self.control_val) is float) :
+        if self.control is not None and (type(self.control_val) is int or type(self.control_val) is float) or type(self.control_val) is str:
             X = testdata[self.var].loc[testdata[self.control]==self.control_val].values
         elif self.control is not None and type(self.control_val) is tuple:
             X = testdata[self.var].loc[(testdata[self.control]>self.control_val[0]) & (testdata[self.control]<self.control_val[1])].values
@@ -96,24 +124,33 @@ def makecsvs():
     for i in range(len(fids)):
         preprocess(fids[i],"data/2010-2021-all/" + f[i] + ".csv")
 
+def find_nearest(a, a0):
+    a = np.asarray(a)
+    idx = np.abs(a - a0).argmin()
+    return a.flat[idx]
+
 def runtests_depth_osd():
-    osd = BenfordWOD(pd.read_csv('data/2010-2021-all/osd.csv'),'oxygen','z',(200,500))
-    osd.testbenford()
-    osd = BenfordWOD(pd.read_csv('data/2010-2021-all/osd.csv'),'oxygen','z',500)
+    osd = BenfordWOD(pd.read_csv('data/2010-2021-all/osd.csv'),'oxygen','z',(0,200))
     osd.testbenford()
 
 def runtests_depth_ctd():
-    ctd = BenfordWOD(pd.read_csv('data/2010-2021-all/ctd.csv'),'oxygen','z',(200,500))
-    ctd.testbenford()
-    ctd = BenfordWOD(pd.read_csv('data/2010-2021-all/ctd.csv'),'oxygen','z',500)
+    ctd = BenfordWOD(pd.read_csv('data/2010-2021-all/ctd.csv'),'oxygen','z',(0,200))
     ctd.testbenford()
 
 def runtests_basin_osd():
-    basins = regionmask.defined_regions.natural_earth.ocean_basins_50
-    lon = np.arange(0.5, 360)
-    lat = np.arange(89.5, -90, -1)
-    mask = basins.mask(lon, lat)
-    #print(mask[round(58.38),round(8.82)])
-    print(np.where(basins.numbers==21))
-    print(basins.names[np.where(basins.numbers==21)[0]])
-    print(mask[50,50])
+    osd = BenfordWOD(pd.read_csv('data/2010-2021-all/osd.csv'),'oxygen','basin','pacific')
+    osd.testbenford()
+    osd = BenfordWOD(pd.read_csv('data/2010-2021-all/osd.csv'),'oxygen','basin','atlantic')
+    osd.testbenford()
+
+def runtests_basin_ctd():
+    osd = BenfordWOD(pd.read_csv('data/2010-2021-all/ctd.csv'),'oxygen','basin','atlantic')
+    osd.testbenford()
+
+
+runtests_basin_osd()
+runtests_depth_osd()
+#runtests_depth_osd()
+#runtests_depth_ctd()
+#runtests_basin_ctd()
+#makecsvs()
