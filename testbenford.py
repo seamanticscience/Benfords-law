@@ -5,6 +5,7 @@ import pandas as pd
 import geopandas as gpd
 import numpy as np
 import regionmask
+import matplotlib.pyplot as plt
 
 #test
 #fid = open("data/ocldb1624454431.12751.OSD") #2010-2021
@@ -101,15 +102,22 @@ class BenfordWOD(object):
             self.control_val = control_val
 
     def testbenford(self):
-        testdata = self.data[self.data[self.var]>=0] #filter out blanks
+        testdata = self.data[self.data[self.var]>0] #filter out blanks
         print(testdata)
         if self.control is not None and (type(self.control_val) is int or type(self.control_val) is float) or type(self.control_val) is str:
-            X = testdata[self.var].loc[testdata[self.control]==self.control_val].values
+            X = testdata[self.var].loc[(testdata[self.control]==self.control_val)].values
         elif self.control is not None and type(self.control_val) is tuple:
             X = testdata[self.var].loc[(testdata[self.control]>self.control_val[0]) & (testdata[self.control]<self.control_val[1])].values
         print(X)
         benfords = BenfordsLaw(X,self.var,self.control,self.control_val)
         benfords.apply_benfords_law()
+
+    def showdata(self,xlabel,range):
+        testdata = self.data[self.var].loc[(self.data[self.var]>range[0]) & (self.data[self.var]<range[1])].values #filter out blanks
+        plt.hist(testdata,bins=50)
+        plt.xlabel(xlabel)
+        plt.show()
+
 
 def makecsvs():
     fids = [open("data/2010-2021-all/ocldb1625108116.22161.OSD"),
@@ -139,19 +147,21 @@ def runtests_depth_ctd():
 
 def runtests_basin_osd():
     osd = BenfordWOD(pd.read_csv('data/2010-2021-all/osd.csv'),'oxygen','basin','pacific')
+    osd.showdata('oxygen (mL/L)',(0,1000))
     osd.testbenford()
     osd = BenfordWOD(pd.read_csv('data/2010-2021-all/osd.csv'),'oxygen','basin','atlantic')
     osd.testbenford()
+
 
 def runtests_basin_ctd():
     osd = BenfordWOD(pd.read_csv('data/2010-2021-all/ctd.csv'),'oxygen','basin','atlantic')
     osd.testbenford()
 
 
-#runtests_basin_osd()
+runtests_basin_osd()
 #runtests_depth_osd()
 #runtests_depth_osd()
 #runtests_depth_ctd()
 #runtests_basin_ctd()
 #makecsvs()
-testwithknownbenford()
+#testwithknownbenford()
