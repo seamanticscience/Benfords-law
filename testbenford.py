@@ -82,7 +82,7 @@ def preprocess(fid,output_name):
 
 
 class BenfordWOD(object):
-    def __init__(self,data,var,control=None,control_val=None):
+    def __init__(self,data,var,control=None,control_val=None,depthcontrol=False):
         """
         Parameters:
            -------------------------------------------------------------------
@@ -100,16 +100,25 @@ class BenfordWOD(object):
             self.control_val=self.data[self.data[self.var]>=0][self.var].iloc[0]
         else:
             self.control_val = control_val
+        self.depthcontrol = depthcontrol
 
     def testbenford(self):
         testdata = self.data[self.data[self.var]>0] #filter out blanks
         print(testdata)
         if self.control is not None and (type(self.control_val) is int or type(self.control_val) is float) or type(self.control_val) is str:
-            X = testdata[self.var].loc[(testdata[self.control]==self.control_val)].values
+            if self.depthcontrol:
+                X = testdata[self.var].loc[(testdata[self.control]==self.control_val) & (testdata['z']>=50) & (testdata['z']<=1000)].values
+            else:
+                X = testdata[self.var].loc[(testdata[self.control]==self.control_val)].values
         elif self.control is not None and type(self.control_val) is tuple:
             X = testdata[self.var].loc[(testdata[self.control]>self.control_val[0]) & (testdata[self.control]<self.control_val[1])].values
+        elif self.control is None:
+            X = testdata[self.var].values
         print(X)
-        benfords = BenfordsLaw(X,self.var,self.control,self.control_val)
+        if self.control is not None:
+            benfords = BenfordsLaw(X,self.var,self.control,self.control_val)
+        else:
+            benfords = BenfordsLaw(X,self.var,'','')
         benfords.apply_benfords_law()
 
     def showdata(self,xlabel,range):
@@ -120,17 +129,17 @@ class BenfordWOD(object):
 
 
 def makecsvs():
-    fids = [open("data/2010-2021-all/ocldb1625108116.22161.OSD"),
-            open("data/2010-2021-all/ocldb1625108116.22161.CTD"),
-            open("data/2010-2021-all/ocldb1625108116.22161.CTD2"),
-            open("data/2010-2021-all/ocldb1625108116.22161.CTD3"),
-            open("data/2010-2021-all/ocldb1625108116.22161.CTD4"),
-            open("data/2010-2021-all/ocldb1625108116.22161.CTD5"),
-            open("data/2010-2021-all/ocldb1625108116.22161.CTD6")
+    fids = [open("data/wod-2010-2021-all/ocldb1625108116.22161.OSD"),
+            open("data/wod-2010-2021-all/ocldb1625108116.22161.CTD"),
+            open("data/wod-2010-2021-all/ocldb1625108116.22161.CTD2"),
+            open("data/wod-2010-2021-all/ocldb1625108116.22161.CTD3"),
+            open("data/wod-2010-2021-all/ocldb1625108116.22161.CTD4"),
+            open("data/wod-2010-2021-all/ocldb1625108116.22161.CTD5"),
+            open("data/wod-2010-2021-all/ocldb1625108116.22161.CTD6")
             ]
     f = ['osd','ctd','ctd2','ctd3','ctd4','ctd5','ctd6']
     for i in range(len(fids)):
-        preprocess(fids[i],"data/2010-2021-all/" + f[i] + ".csv")
+        preprocess(fids[i],"data/wod-2010-2021-all/" + f[i] + ".csv")
 
 def find_nearest(a, a0):
     a = np.asarray(a)
@@ -138,30 +147,42 @@ def find_nearest(a, a0):
     return a.flat[idx]
 
 def runtests_depth_osd():
-    osd = BenfordWOD(pd.read_csv('data/2010-2021-all/osd.csv'),'oxygen','z',(0,200))
+    osd = BenfordWOD(pd.read_csv('data/wod-2010-2021-all/osd.csv'),'oxygen','z',(0,200))
     osd.testbenford()
 
 def runtests_depth_ctd():
-    ctd = BenfordWOD(pd.read_csv('data/2010-2021-all/ctd.csv'),'oxygen','z',(0,200))
+    ctd = BenfordWOD(pd.read_csv('data/wod-2010-2021-all/ctd.csv'),'oxygen','z',(0,200))
     ctd.testbenford()
 
 def runtests_basin_osd():
-    osd = BenfordWOD(pd.read_csv('data/2010-2021-all/osd.csv'),'oxygen','basin','pacific')
+    osd = BenfordWOD(pd.read_csv('data/wod-2010-2021-all/osd.csv'),'oxygen','basin','pacific')
     osd.showdata('oxygen (mL/L)',(0,1000))
     osd.testbenford()
-    osd = BenfordWOD(pd.read_csv('data/2010-2021-all/osd.csv'),'oxygen','basin','atlantic')
+    osd = BenfordWOD(pd.read_csv('data/wod-2010-2021-all/osd.csv'),'oxygen','basin','atlantic')
     osd.testbenford()
 
 
 def runtests_basin_ctd():
-    osd = BenfordWOD(pd.read_csv('data/2010-2021-all/ctd.csv'),'oxygen','basin','atlantic')
+    osd = BenfordWOD(pd.read_csv('data/wod-2010-2021-all/ctd.csv'),'oxygen','basin','atlantic')
     osd.testbenford()
 
+def runtests_basin_osd_bydepth():
+    osd = BenfordWOD(pd.read_csv('data/wod-2010-2021-all/osd.csv'),'oxygen','basin','pacific',depthcontrol=True)
+    osd.showdata('oxygen (mL/L)',(50,1000))
+    osd.testbenford()
+    osd = BenfordWOD(pd.read_csv('data/wod-2010-2021-all/osd.csv'),'oxygen','basin','atlantic',depthcontrol=True)
+    osd.testbenford()
 
-runtests_basin_osd()
+def runtests_glodap():
+    glodap = BenfordWOD(pd.read_csv('data/GLODAPv2.2020_Pacific_Ocean.csv'),'G2oxygen')
+    glodap.testbenford()
+
+#runtests_basin_osd()
 #runtests_depth_osd()
 #runtests_depth_osd()
 #runtests_depth_ctd()
 #runtests_basin_ctd()
 #makecsvs()
 #testwithknownbenford()
+#runtests_basin_osd_bydepth()
+runtests_glodap()
