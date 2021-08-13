@@ -36,7 +36,7 @@ def nasa_plot_benford(url,restrict_basin=False):
         data1= ds.where(mask ==4)
         data2 = ds.where(mask ==3)
         ds = xr.concat([data1,data2],dim='time')
-    benfords = BenfordsLaw(ds.chlor_a.values)
+    benfords = BenfordsLaw(ds.chlor_a.values.flatten())
     benfords.apply_benfords_law()
 
 #copernicus
