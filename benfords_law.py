@@ -128,8 +128,12 @@ class BenfordsLaw:
         plt.text(7.2,0.7,'(chi2,p): (' + str(round(stat[0], 2)) + ',' + str(round(stat[1],4)) + ')')
         # Create legend & Show graphic
         plt.legend()
-        plt.title("First Significant Digit distribution vs Expected Benford's Law Distribution for " + self.col + " with " + self.control + "=" + str(self.control_val))
-        plt.savefig('results/' + self.col + '_' + self.control + '=' + str(self.control_val) + '.png')
+        try:
+            plt.title("First Significant Digit distribution vs Expected Benford's Law Distribution for " + self.col + " with " + self.control + "=" + str(self.control_val))
+            plt.savefig('results/' + self.col + '_' + self.control + '=' + str(self.control_val) + '.png')
+        except:
+            plt.title("First Significant Digit distribution vs Expected Benford's Law Distribution for chlor_a")
+            plt.savefig('results/chlor_a.png')
         plt.show()
 
     def apply_chi_sq_test(self,
@@ -158,7 +162,10 @@ class BenfordsLaw:
         Runs all relevant processes and then applies all tests to input dataset
         """
         self._extract_fsd()
+        print('fsd extracted')
         self.get_counts()
+        print('counts got')
         self.get_distribution()
+        print('distribution got')
         stat = self.apply_chi_sq_test()
         self.apply_visual_test(stat)
